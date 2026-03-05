@@ -1,5 +1,5 @@
 {
-  "name": "GeoBank Intelligence Dashboard",
+  "name": "BRI Intelligence Dashboard",
   "description": "Comprehensive geospatial banking analytics platform for monitoring territory performance, RM productivity, and market opportunities with AI-driven insights.",
   "requestFramePermissions": [
     "geolocation"

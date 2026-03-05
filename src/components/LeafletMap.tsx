@@ -1,12 +1,30 @@
-import React, { useState } from 'react';
-import { MapPin, Navigation, Layers, ZoomIn, ZoomOut, Search, Check, Circle, Square, Pentagon, ChevronRight, Home } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import L from 'leaflet';
+import { MapPin, Navigation, Layers, ZoomIn, ZoomOut, Search, Check, Circle, Square, Pentagon, ChevronRight, Home, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+import { MOCK_MERCHANTS, MOCK_POIS, MOCK_COMPETITORS, BRI_BRANCH } from '../mockData';
+
+// Import Leaflet CSS
+import 'leaflet/dist/leaflet.css';
+
+// Fix Leaflet default icon issue
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 type HeatmapMetric = 'penetration' | 'casa' | 'density' | 'productivity';
 type DrawingMode = null | 'circle' | 'rectangle' | 'polygon';
 
-const GeoMap: React.FC = () => {
+const LeafletMap: React.FC = () => {
+  const mapRef = useRef<L.Map | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const markersRef = useRef<L.LayerGroup>(L.layerGroup());
+  const heatmapRef = useRef<L.LayerGroup>(L.layerGroup());
+  
   const [layers, setLayers] = useState({
     acquired: true,
     potential: true,
@@ -19,15 +37,228 @@ const GeoMap: React.FC = () => {
   const [heatmapMetric, setHeatmapMetric] = useState<HeatmapMetric>('penetration');
   const [drawingMode, setDrawingMode] = useState<DrawingMode>(null);
   const [breadcrumb, setBreadcrumb] = useState(['Jakarta Pusat']);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Initialize map
+  useEffect(() => {
+    if (!mapContainerRef.current || mapRef.current) return;
+
+    // Create map instance
+    const map = L.map(mapContainerRef.current, {
+      center: [-6.1812, 106.8378], // Jakarta Pusat
+      zoom: 13,
+      zoomControl: false,
+      attributionControl: true,
+    });
+
+    // Add tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map);
+
+    // Add layer groups
+    markersRef.current.addTo(map);
+    heatmapRef.current.addTo(map);
+
+    mapRef.current = map;
+
+    // Force map to invalidate size after a short delay
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  // Update markers based on layers
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    markersRef.current.clearLayers();
+
+    // Add acquired merchants
+    if (layers.acquired) {
+      MOCK_MERCHANTS.filter(m => m.status === 'acquired').forEach(merchant => {
+        const icon = L.divIcon({
+          className: 'custom-marker',
+          html: `<div class="w-8 h-8 bg-indigo-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+                   <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                     <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                   </svg>
+                 </div>`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 32],
+        });
+
+        const marker = L.marker([merchant.lat, merchant.lng], { icon })
+          .bindPopup(`
+            <div class="p-2">
+              <div class="font-bold text-sm mb-1">${merchant.name}</div>
+              <div class="text-xs text-slate-600">Status: <span class="font-bold text-indigo-600">Acquired</span></div>
+              <div class="text-xs text-slate-600">CASA: <span class="font-bold">Rp ${merchant.casa}M</span></div>
+              <div class="text-xs text-slate-600">RM: <span class="font-bold">${merchant.rm}</span></div>
+              <div class="text-xs text-slate-600">Category: ${merchant.category}</div>
+            </div>
+          `);
+
+        markersRef.current.addLayer(marker);
+      });
+    }
+
+    // Add potential merchants
+    if (layers.potential) {
+      MOCK_MERCHANTS.filter(m => m.status === 'potential').forEach(merchant => {
+        const icon = L.divIcon({
+          className: 'custom-marker',
+          html: `<div class="w-8 h-8 bg-orange-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+                   <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                     <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                   </svg>
+                 </div>`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 32],
+        });
+
+        const marker = L.marker([merchant.lat, merchant.lng], { icon })
+          .bindPopup(`
+            <div class="p-2">
+              <div class="font-bold text-sm mb-1">${merchant.name}</div>
+              <div class="text-xs text-slate-600">Status: <span class="font-bold text-orange-600">Potential TAM</span></div>
+              <div class="text-xs text-slate-600">Est. Revenue: <span class="font-bold">Rp 30M</span></div>
+              <div class="text-xs text-slate-600">Category: ${merchant.category}</div>
+            </div>
+          `);
+
+        markersRef.current.addLayer(marker);
+      });
+    }
+
+    // Add BRI branch
+    if (layers.branches) {
+      const icon = L.divIcon({
+        className: 'custom-marker',
+        html: `<div class="relative">
+                 <div class="absolute inset-0 bg-purple-500/20 rounded-full animate-ping scale-150"></div>
+                 <div class="relative bg-purple-600 p-2 rounded-xl shadow-xl border-2 border-white">
+                   <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                     <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                   </svg>
+                 </div>
+               </div>`,
+        iconSize: [40, 40],
+        iconAnchor: [20, 40],
+      });
+
+      const marker = L.marker([BRI_BRANCH.lat, BRI_BRANCH.lng], { icon })
+        .bindPopup(`
+          <div class="p-2">
+            <div class="font-bold text-sm mb-1">${BRI_BRANCH.name}</div>
+            <div class="text-xs text-slate-600">Type: <span class="font-bold text-purple-600">Main Branch</span></div>
+          </div>
+        `);
+
+      markersRef.current.addLayer(marker);
+    }
+
+    // Add POIs
+    if (layers.poi) {
+      MOCK_POIS.forEach(poi => {
+        const icon = L.divIcon({
+          className: 'custom-marker',
+          html: `<div class="w-6 h-6 bg-cyan-500 rounded-full border-2 border-white shadow-md"></div>`,
+          iconSize: [24, 24],
+          iconAnchor: [12, 24],
+        });
+
+        const marker = L.marker([poi.lat, poi.lng], { icon })
+          .bindPopup(`
+            <div class="p-2">
+              <div class="font-bold text-sm mb-1">${poi.name}</div>
+              <div class="text-xs text-slate-600">Type: ${poi.category}</div>
+              <div class="text-xs text-slate-600">Traffic: <span class="font-bold">${poi.traffic}</span></div>
+            </div>
+          `);
+
+        markersRef.current.addLayer(marker);
+      });
+    }
+
+    // Add competitors
+    if (layers.competitors) {
+      MOCK_COMPETITORS.forEach(comp => {
+        const icon = L.divIcon({
+          className: 'custom-marker',
+          html: `<div class="w-6 h-6 bg-red-600 rounded-lg border-2 border-white shadow-md"></div>`,
+          iconSize: [24, 24],
+          iconAnchor: [12, 24],
+        });
+
+        const marker = L.marker([comp.lat, comp.lng], { icon })
+          .bindPopup(`
+            <div class="p-2">
+              <div class="font-bold text-sm mb-1">${comp.name}</div>
+              <div class="text-xs text-slate-600">Type: <span class="font-bold">${comp.type}</span></div>
+            </div>
+          `);
+
+        markersRef.current.addLayer(marker);
+      });
+    }
+  }, [layers]);
+
+  // Add heatmap circles
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    heatmapRef.current.clearLayers();
+
+    if (layers.heatmap) {
+      // Create heatmap circles based on merchant density
+      const heatmapData = [
+        { lat: -6.1944, lng: 106.8294, value: 0.8, radius: 800 }, // Menteng - High
+        { lat: -6.1856, lng: 106.8145, value: 0.6, radius: 700 }, // Tanah Abang - Medium
+        { lat: -6.1753, lng: 106.8267, value: 0.7, radius: 600 }, // Gambir - Medium-High
+        { lat: -6.1589, lng: 106.8234, value: 0.5, radius: 500 }, // Sawah Besar - Medium
+        { lat: -6.1678, lng: 106.8456, value: 0.4, radius: 600 }, // Kemayoran - Low-Medium
+        { lat: -6.1734, lng: 106.8512, value: 0.3, radius: 500 }, // Senen - Low
+      ];
+
+      heatmapData.forEach(point => {
+        const color = point.value > 0.7 ? '#22c55e' : point.value > 0.5 ? '#eab308' : '#ef4444';
+        const circle = L.circle([point.lat, point.lng], {
+          radius: point.radius,
+          fillColor: color,
+          fillOpacity: 0.2,
+          color: color,
+          weight: 1,
+          opacity: 0.4,
+        });
+
+        heatmapRef.current.addLayer(circle);
+      });
+    }
+  }, [layers.heatmap, heatmapMetric]);
 
   const toggleLayer = (layer: keyof typeof layers) => {
     setLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
   };
 
+  const handleZoomIn = () => {
+    mapRef.current?.zoomIn();
+  };
+
+  const handleZoomOut = () => {
+    mapRef.current?.zoomOut();
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden relative h-full min-h-[400px]">
       {/* Breadcrumb Navigation */}
-      <div className="absolute top-4 left-4 z-20 pointer-events-auto">
+      <div className="absolute top-4 left-4 z-[1000] pointer-events-auto">
         <div className="bg-white/95 backdrop-blur-md px-3 py-2 rounded-xl shadow-lg border border-slate-200 flex items-center gap-2">
           <Home className="w-3.5 h-3.5 text-slate-400" />
           {breadcrumb.map((item, idx) => (
@@ -47,14 +278,14 @@ const GeoMap: React.FC = () => {
       </div>
 
       {/* Map Controls - Right Side */}
-      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 pointer-events-auto">
+      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2 pointer-events-auto">
         {/* Zoom Controls */}
         <div className="bg-white/90 backdrop-blur-md p-1 rounded-xl shadow-lg border border-slate-200 flex flex-col gap-1">
-          <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600">
+          <button onClick={handleZoomIn} className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600">
             <ZoomIn className="w-4 h-4" />
           </button>
           <div className="h-px bg-slate-100 mx-1" />
-          <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600">
+          <button onClick={handleZoomOut} className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600">
             <ZoomOut className="w-4 h-4" />
           </button>
         </div>
@@ -113,7 +344,12 @@ const GeoMap: React.FC = () => {
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-200 p-3 z-50"
               >
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 py-1 mb-2">Map Layers</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 py-1">Map Layers</p>
+                  <button onClick={() => setShowLayerPanel(false)} className="p-1 hover:bg-slate-100 rounded">
+                    <X className="w-3 h-3 text-slate-400" />
+                  </button>
+                </div>
                 <div className="space-y-1">
                   {[
                     { id: 'heatmap', label: 'Heatmap Overlay', color: 'bg-gradient-to-r from-red-500 to-green-500' },
@@ -179,11 +415,13 @@ const GeoMap: React.FC = () => {
       </div>
 
       {/* Map Search Overlay */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-96 max-w-[calc(100%-2rem)] pointer-events-auto">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] w-96 max-w-[calc(100%-2rem)] pointer-events-auto">
         <div className="bg-white/95 backdrop-blur-md p-2 rounded-xl shadow-lg border border-slate-200 flex items-center gap-2">
           <Search className="w-4 h-4 text-slate-400 ml-2" />
           <input 
             type="text" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search merchant, POI, or address..." 
             className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-slate-400"
           />
@@ -197,7 +435,7 @@ const GeoMap: React.FC = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="absolute top-20 right-4 z-10 pointer-events-none"
+            className="absolute top-20 right-4 z-[1000] pointer-events-none"
           >
             <div className="bg-indigo-600 text-white px-4 py-2 rounded-xl shadow-lg text-xs font-bold flex items-center gap-2">
               {drawingMode === 'circle' && <Circle className="w-3.5 h-3.5" />}
@@ -209,157 +447,15 @@ const GeoMap: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Mock Map Background with Heatmap Effect */}
-      <div className="w-full h-full bg-slate-50 relative overflow-hidden">
-        {/* Heatmap Overlay */}
-        {layers.heatmap && (
-          <div className="absolute inset-0 opacity-30 pointer-events-none">
-            <div className="absolute top-[20%] left-[25%] w-48 h-48 bg-gradient-radial from-green-400 to-transparent rounded-full blur-3xl" />
-            <div className="absolute top-[40%] left-[60%] w-64 h-64 bg-gradient-radial from-yellow-400 to-transparent rounded-full blur-3xl" />
-            <div className="absolute top-[65%] left-[35%] w-56 h-56 bg-gradient-radial from-red-400 to-transparent rounded-full blur-3xl" />
-            <div className="absolute top-[15%] left-[75%] w-40 h-40 bg-gradient-radial from-orange-400 to-transparent rounded-full blur-3xl" />
-          </div>
-        )}
-        
-        <svg viewBox="0 0 800 600" className="w-full h-full opacity-40">
-          <path d="M100,100 L200,150 L300,100 L400,200 L500,150 L600,250 L700,200" fill="none" stroke="#cbd5e1" strokeWidth="2" />
-          <path d="M50,300 L150,350 L250,300 L350,400 L450,350 L550,450 L650,400" fill="none" stroke="#cbd5e1" strokeWidth="2" />
-          <path d="M200,50 L250,150 L200,250 L300,350 L250,450 L350,550" fill="none" stroke="#cbd5e1" strokeWidth="2" />
-          <path d="M500,50 L550,150 L500,250 L600,350 L550,450 L650,550" fill="none" stroke="#cbd5e1" strokeWidth="2" />
-          
-          {/* Grid lines */}
-          {Array.from({ length: 10 }).map((_, i) => (
-            <React.Fragment key={i}>
-              <line x1={i * 80} y1="0" x2={i * 80} y2="600" stroke="#e2e8f0" strokeWidth="1" />
-              <line x1="0" y1={i * 60} x2="800" y2={i * 60} stroke="#e2e8f0" strokeWidth="1" />
-            </React.Fragment>
-          ))}
-        </svg>
-
-        {/* Map Markers */}
-        <div className="absolute inset-0">
-          <AnimatePresence>
-            {/* Existing Merchants (Indigo) */}
-            {layers.acquired && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0 }}
-              >
-                <div className="absolute top-[20%] left-[30%] group cursor-pointer">
-                  <div className="relative">
-                    <MapPin className="w-6 h-6 text-indigo-600 drop-shadow-md hover:scale-110 transition-transform" />
-                    <div className="absolute -top-20 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 shadow-xl">
-                      <div className="font-bold mb-1">Toko Berkah</div>
-                      <div className="text-[10px] text-slate-300">Status: Acquired</div>
-                      <div className="text-[10px] text-slate-300">CASA: Rp 45M</div>
-                      <div className="text-[10px] text-slate-300">RM: Sari Wulandari</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="absolute top-[45%] left-[55%] group cursor-pointer">
-                  <MapPin className="w-6 h-6 text-indigo-600 drop-shadow-md" />
-                </div>
-                <div className="absolute top-[70%] left-[25%] group cursor-pointer">
-                  <MapPin className="w-6 h-6 text-indigo-600 drop-shadow-md" />
-                </div>
-              </motion.div>
-            )}
-
-            {/* Potential Merchants (Orange) */}
-            {layers.potential && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0 }}
-              >
-                <div className="absolute top-[35%] left-[70%] group cursor-pointer">
-                  <div className="relative">
-                    <MapPin className="w-6 h-6 text-orange-500 drop-shadow-md hover:scale-110 transition-transform" />
-                    <div className="absolute -top-20 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 shadow-xl">
-                      <div className="font-bold mb-1">Warung Kita</div>
-                      <div className="text-[10px] text-slate-300">Status: Potential TAM</div>
-                      <div className="text-[10px] text-slate-300">Est. Revenue: Rp 30M</div>
-                      <div className="text-[10px] text-slate-300">Category: F&B</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="absolute top-[60%] left-[40%] group cursor-pointer">
-                  <MapPin className="w-6 h-6 text-orange-500 drop-shadow-md" />
-                </div>
-                <div className="absolute top-[15%] left-[80%] group cursor-pointer">
-                  <MapPin className="w-6 h-6 text-orange-500 drop-shadow-md" />
-                </div>
-              </motion.div>
-            )}
-
-            {/* POI Markers */}
-            {layers.poi && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0 }}
-              >
-                <div className="absolute top-[25%] left-[45%] group cursor-pointer">
-                  <div className="relative">
-                    <div className="w-5 h-5 bg-cyan-500 rounded-full border-2 border-white shadow-md" />
-                    <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 shadow-xl">
-                      <div className="font-bold mb-1">Pasar Tanah Abang</div>
-                      <div className="text-[10px] text-slate-300">Type: Traditional Market</div>
-                      <div className="text-[10px] text-slate-300">Traffic: High</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="absolute top-[55%] left-[65%] group cursor-pointer">
-                  <div className="w-5 h-5 bg-cyan-500 rounded-full border-2 border-white shadow-md" />
-                </div>
-              </motion.div>
-            )}
-
-            {/* Competitor Markers */}
-            {layers.competitors && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0 }}
-              >
-                <div className="absolute top-[40%] left-[20%] group cursor-pointer">
-                  <div className="relative">
-                    <div className="w-5 h-5 bg-red-600 rounded-lg border-2 border-white shadow-md" />
-                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 shadow-xl">
-                      <div className="font-bold mb-1">Competitor Branch</div>
-                      <div className="text-[10px] text-slate-300">Bank XYZ</div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Bank Branch (Purple) */}
-            {layers.branches && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0 }}
-                className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2"
-              >
-                <div className="relative">
-                  <div className="absolute inset-0 bg-purple-500/20 rounded-full animate-ping scale-150" />
-                  <div className="relative bg-purple-600 p-2 rounded-xl shadow-xl border-2 border-white">
-                    <Navigation className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-white px-3 py-1 rounded-full shadow-md border border-slate-200 whitespace-nowrap">
-                    <span className="text-[10px] font-bold text-slate-900 uppercase tracking-wider">Branch: Jakarta Pusat Main</span>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
+      {/* Leaflet Map Container */}
+      <div 
+        ref={mapContainerRef} 
+        className="w-full h-full min-h-[400px]"
+        style={{ minHeight: '400px', height: '100%', width: '100%' }}
+      />
 
       {/* Enhanced Map Legend */}
-      <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-lg border border-slate-200 max-w-xs">
+      <div className="absolute bottom-4 left-4 z-[1000] bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-lg border border-slate-200 max-w-xs pointer-events-auto">
         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Active Layers</div>
         <div className="space-y-2.5">
           {layers.heatmap && (
@@ -407,4 +503,4 @@ const GeoMap: React.FC = () => {
   );
 };
 
-export default GeoMap;
+export default LeafletMap;

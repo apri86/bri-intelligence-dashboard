@@ -15,6 +15,10 @@ export interface RMPerformance {
   conversion: number;
   status: 'Top Performer' | 'On Track' | 'Needs Improvement';
   portfolio: number; // in billions
+  phone: string;
+  email: string;
+  territory: string;
+  branch: string;
 }
 
 export interface DistrictData {

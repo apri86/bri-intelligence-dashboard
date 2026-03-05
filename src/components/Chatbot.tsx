@@ -9,7 +9,7 @@ const Chatbot: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'model',
-      content: "Halo! Saya GeoBank AI. Saya bisa membantu Anda menganalisis performa wilayah, produktivitas RM, dan mengidentifikasi peluang pasar baru. Apa yang ingin Anda ketahui hari ini?",
+      content: "Halo! Saya BRI AI. Saya bisa membantu Anda menganalisis performa wilayah, produktivitas RM, dan mengidentifikasi peluang pasar baru. Apa yang ingin Anda ketahui hari ini?",
       timestamp: new Date()
     }
   ]);
@@ -17,6 +17,14 @@ const Chatbot: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const suggestionChips = [
+    "Tampilkan area dengan penetrasi rendah",
+    "Siapa RM dengan performa terbaik?",
+    "Analisis opportunity gap di Thamrin",
+    "Bandingkan CASA Jakarta Pusat vs Selatan",
+    "Rekomendasi area prioritas akuisisi"
+  ];
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -44,7 +52,7 @@ const Chatbot: React.FC = () => {
       const model = "gemini-3-flash-preview";
       
       const systemInstruction = `
-        You are GeoBank AI, a specialized assistant for a banking geospatial intelligence dashboard.
+        You are BRI AI, a specialized assistant for a banking geospatial intelligence dashboard.
         Your goal is to provide data-driven insights based on:
         1. Internal Bank Data: Customer profiles, Merchant/QRIS, Product transactions (Savings, Credit, CASA), RM performance.
         2. External Data: Market locations, Demographics, Economic indicators (PDRB), Competitive landscape.
@@ -104,7 +112,7 @@ const Chatbot: React.FC = () => {
             <Sparkles className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="font-bold leading-tight">GeoBank AI Assistant</h3>
+            <h3 className="font-bold leading-tight">BRI AI Assistant</h3>
             <div className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
               <p className="text-[10px] text-indigo-100 font-medium uppercase tracking-wider">Online • Ready to Analyze</p>
@@ -133,7 +141,7 @@ const Chatbot: React.FC = () => {
           >
             <div className={cn(
               "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm",
-              msg.role === 'user' ? "bg-indigo-600 text-white" : "bg-white text-indigo-600"
+              msg.role === 'user' ? "bg-indigo-600 text-white" : "bg-white text-indigo-600 border border-slate-100"
             )}>
               {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
             </div>
@@ -166,6 +174,32 @@ const Chatbot: React.FC = () => {
             </div>
           </div>
         )}
+        
+        {/* Suggestion Chips - Show only when no messages from user yet */}
+        {messages.length === 1 && !isLoading && (
+          <div className="space-y-3">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Suggested Questions</p>
+            <div className="flex flex-wrap gap-2">
+              {suggestionChips.map((suggestion, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setInput(suggestion);
+                    // Auto-submit after a brief delay
+                    setTimeout(() => {
+                      const submitEvent = new KeyboardEvent('keydown', { key: 'Enter' });
+                      document.dispatchEvent(submitEvent);
+                    }, 100);
+                  }}
+                  className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all shadow-sm"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        
         <div ref={messagesEndRef} />
       </div>
 
