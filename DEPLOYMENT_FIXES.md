@@ -1,0 +1,132 @@
+# Deployment Fixes for Vercel
+
+## Issues Fixed
+
+### 1. Map Component Error: `t.markerClusterGroup is not a function`
+
+**Problem:**
+- Leaflet MarkerCluster plugin not properly imported in production build
+- TypeScript types not properly declared for the plugin
+
+**Solution:**
+- Reorganized imports in `src/components/LeafletMap.tsx`
+- Added TypeScript module declaration for `leaflet.markercluster`
+- Ensured CSS imports are in correct order
+
+**Changes Made:**
+```typescript
+// Before
+import L from 'leaflet';
+import 'leaflet.markercluster';
+
+// After
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+
+// Added type declarations
+declare module 'leaflet' {
+  function markerClusterGroup(options?: any): MarkerClusterGroup;
+  
+  interface MarkerClusterGroup extends LayerGroup {
+    addLayer(layer: Layer): this;
+    addLayers(layers: Layer[]): this;
+    clearLayers(): this;
+  }
+}
+```
+
+### 2. 404 Error on Page Refresh
+
+**Problem:**
+- Vercel serves static files by default
+- Client-side routing (React Router) requires all routes to serve `index.html`
+- Refreshing on routes like `/dashboard` or `/campaign` returns 404
+
+**Solution:**
+- Created `vercel.json` configuration file
+- Added rewrite rule to redirect all routes to `index.html`
+
+**File Created: `vercel.json`**
+```json
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+```
+
+## Deployment Checklist
+
+Before deploying to Vercel:
+
+1. ✅ Ensure `vercel.json` is in project root
+2. ✅ Verify all Leaflet imports are correct
+3. ✅ Test build locally: `npm run build`
+4. ✅ Test preview locally: `npm run preview`
+5. ✅ Check all routes work after refresh
+6. ✅ Verify map components load correctly
+
+## Testing After Deployment
+
+1. **Test Routing:**
+   - Navigate to different pages
+   - Refresh browser (F5) on each page
+   - Verify no 404 errors
+
+2. **Test Map Components:**
+   - Dashboard page (national heatmap)
+   - Interactive Map View (territorial menu)
+   - Geospatial Data View (data menu)
+   - Verify markers cluster correctly
+   - Check layer toggles work
+
+3. **Test Performance:**
+   - Check map loads within 2 seconds
+   - Verify layer toggles respond within 500ms
+   - Test with different zoom levels
+
+## Common Issues
+
+### Issue: Map still shows error after deployment
+**Solution:** Clear Vercel build cache and redeploy
+```bash
+# In Vercel dashboard:
+# Settings > General > Clear Build Cache
+```
+
+### Issue: Routes work but map doesn't load
+**Solution:** Check browser console for specific errors
+- Verify CDN links for Leaflet CSS/JS are accessible
+- Check if markercluster plugin loaded correctly
+
+### Issue: 404 on specific routes only
+**Solution:** Verify `vercel.json` is committed to repository
+```bash
+git add vercel.json
+git commit -m "Add Vercel routing configuration"
+git push
+```
+
+## Environment Variables
+
+If using environment variables, ensure they are set in Vercel:
+
+1. Go to Vercel Dashboard
+2. Select your project
+3. Settings > Environment Variables
+4. Add variables from `.env.example`
+
+## Build Configuration
+
+Default Vite build settings work with Vercel:
+- Build Command: `npm run build`
+- Output Directory: `dist`
+- Install Command: `npm install`
+
+No additional configuration needed.

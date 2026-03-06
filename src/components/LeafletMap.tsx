@@ -1,16 +1,28 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Import markercluster with proper types
 import 'leaflet.markercluster';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+
 import { MapPin, Navigation, Layers, ZoomIn, ZoomOut, Search, Check, Circle, Square, Pentagon, ChevronRight, Home, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { MOCK_MERCHANTS, MOCK_POIS, MOCK_COMPETITORS, BRI_BRANCH } from '../mockData';
 import { debounce } from '../utils/debounce';
 
-// Import Leaflet CSS
-import 'leaflet/dist/leaflet.css';
-import 'leaflet.markercluster/dist/MarkerCluster.css';
-import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+// Extend Leaflet types for markerClusterGroup
+declare module 'leaflet' {
+  function markerClusterGroup(options?: any): MarkerClusterGroup;
+  
+  interface MarkerClusterGroup extends LayerGroup {
+    addLayer(layer: Layer): this;
+    addLayers(layers: Layer[]): this;
+    clearLayers(): this;
+  }
+}
 
 // Fix Leaflet default icon issue
 delete (L.Icon.Default.prototype as any)._getIconUrl;
