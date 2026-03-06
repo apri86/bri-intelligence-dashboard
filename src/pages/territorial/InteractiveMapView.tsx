@@ -5,7 +5,7 @@ import LeafletMap from '../../components/LeafletMap';
 const InteractiveMapView: FC = () => {
   return (
     <PageLayout
-      title="Peta Interaktif"
+      title="Interactive Map"
       subtitle="Interactive map with branch, merchant, and customer distributions"
     >
       <div className="h-[calc(100vh-12rem)]">

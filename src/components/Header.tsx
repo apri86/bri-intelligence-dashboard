@@ -128,7 +128,6 @@ const Header: FC<HeaderProps> = ({ onToggleMobileMenu, isMobileMenuOpen, isSideb
               className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors"
               aria-label="Change language"
             >
-              <Globe className="w-4 h-4 text-slate-600" />
               <span className="hidden md:inline">
                 <FlagIcon code={locale} className="w-5 h-4" />
               </span>
