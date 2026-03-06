@@ -77,7 +77,7 @@ describe('LeafletMap Performance Optimizations - Requirement 3.7', () => {
     }
   });
 
-  it('should have debounce utility for performance optimization', (done) => {
+  it('should have debounce utility for performance optimization', async () => {
     const mockFn = vi.fn();
     const debouncedFn = debounce(mockFn, 100);
     
@@ -90,11 +90,10 @@ describe('LeafletMap Performance Optimizations - Requirement 3.7', () => {
     expect(mockFn).not.toHaveBeenCalled();
     
     // Wait for debounce period
-    setTimeout(() => {
-      // Should have been called only once
-      expect(mockFn).toHaveBeenCalledTimes(1);
-      done();
-    }, 150);
+    await new Promise(resolve => setTimeout(resolve, 150));
+    
+    // Should have been called only once
+    expect(mockFn).toHaveBeenCalledTimes(1);
   });
 
   it('should render map component with performance optimizations', () => {

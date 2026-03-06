@@ -1,9 +1,9 @@
-import { FC, useMemo } from 'react';
+import { FC, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, TrendingUp, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Sparkles, TrendingUp, AlertTriangle, ChevronRight, Filter } from 'lucide-react';
 import { motion } from 'motion/react';
 import PageLayout from '../components/PageLayout';
-import PageFilters from '../components/PageFilters';
+import FilterSheet from '../components/FilterSheet';
 import StatCard from '../components/StatCard';
 import TrendChart from '../components/TrendChart';
 import LeafletMap from '../components/LeafletMap';
@@ -24,6 +24,7 @@ import { MOCK_TREND_DATA } from '../mockData';
  * - Growth trend charts (MoM, YoY)
  * - AI-generated alerts section
  * - Quick query chatbot interface link
+ * - Filter sheet for filtering data
  * - Connected to FilterContext for time period filtering
  * 
  * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7
@@ -31,6 +32,12 @@ import { MOCK_TREND_DATA } from '../mockData';
 const DashboardPage: FC = () => {
   const { filters } = useFilters();
   const { user } = useAuth();
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+
+  // Count active filters
+  const activeFilterCount = useMemo(() => {
+    return filters.territory.length + filters.branch.length + filters.product.length;
+  }, [filters]);
 
   // KPI data - would be fetched from API based on filters
   const kpiStats: Stat[] = useMemo(() => [
@@ -138,13 +145,27 @@ const DashboardPage: FC = () => {
   ], []);
 
   return (
-    <PageLayout
-      title="Dashboard"
-      subtitle="Executive overview of territorial intelligence and performance metrics"
-      filters={<PageFilters />}
-    >
+    <>
+      <PageLayout
+        title="Dashboard"
+        subtitle="Executive overview of territorial intelligence and performance metrics"
+        filterButton={
+          <button
+            onClick={() => setIsFilterSheetOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors text-sm font-medium text-slate-700"
+          >
+            <Filter className="w-4 h-4" />
+            <span>Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="ml-1 px-2 py-0.5 rounded-full bg-indigo-600 text-white text-xs font-bold">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+        }
+      >
       {/* KPI Cards Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {kpiStats.map((stat, index) => (
           <StatCard key={index} stat={stat} />
         ))}
@@ -330,6 +351,13 @@ const DashboardPage: FC = () => {
         </div>
       </div>
     </PageLayout>
+
+    {/* Filter Sheet */}
+    <FilterSheet
+      isOpen={isFilterSheetOpen}
+      onClose={() => setIsFilterSheetOpen(false)}
+    />
+    </>
   );
 };
 

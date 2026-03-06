@@ -75,6 +75,8 @@ const Layout: FC = () => {
           <Header 
             onToggleMobileMenu={handleToggleMobileMenu}
             isMobileMenuOpen={isMobileMenuOpen}
+            isSidebarCollapsed={isSidebarCollapsed}
+            onToggleSidebar={handleToggleSidebar}
           />
           
           {/* Page content outlet with proper spacing */}

@@ -1,10 +1,11 @@
 import { FC, useMemo, useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Download, Plus, Target, TrendingUp, Users, Calendar } from 'lucide-react';
+import { Download, Plus, Target, TrendingUp, Users, Calendar, Filter } from 'lucide-react';
 import { motion } from 'motion/react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import PageLayout from '../components/PageLayout';
 import PageFilters from '../components/PageFilters';
+import FilterSheet from '../components/FilterSheet';
 import StatCard from '../components/StatCard';
 import DataTable from '../components/DataTable';
 import {
@@ -59,6 +60,7 @@ const CampaignPage: FC = () => {
   // Local state
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [showCreateCampaign, setShowCreateCampaign] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // Initialize mock data on component mount
   useEffect(() => {
@@ -298,15 +300,41 @@ const CampaignPage: FC = () => {
     </>
   );
 
-  return (
-    <PageLayout
-      title="Campaign & Activation"
-      subtitle="Manage campaigns and merchant reactivation initiatives"
-      filters={<PageFilters />}
-      actions={actions}
-      loading={loading}
-      error={error || undefined}
+  // Filter button with active count
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.dateRange) count++;
+    if (filters.region && filters.region !== 'all') count++;
+    if (filters.branch && filters.branch !== 'all') count++;
+    if (filters.rm && filters.rm !== 'all') count++;
+    return count;
+  }, [filters]);
+
+  const filterButton = (
+    <button
+      onClick={() => setIsFilterOpen(true)}
+      className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-colors relative"
     >
+      <Filter className="w-4 h-4" />
+      Filter
+      {activeFilterCount > 0 && (
+        <span className="absolute -top-1 -right-1 w-5 h-5 bg-indigo-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
+          {activeFilterCount}
+        </span>
+      )}
+    </button>
+  );
+
+  return (
+    <>
+      <PageLayout
+        title="Campaign & Activation"
+        subtitle="Manage campaigns and merchant reactivation initiatives"
+        filterButton={filterButton}
+        actions={actions}
+        loading={loading}
+        error={error || undefined}
+      >
       {/* Campaign KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {campaignStats.map((stat, index) => (
@@ -574,6 +602,14 @@ const CampaignPage: FC = () => {
         </div>
       </div>
     </PageLayout>
+
+    <FilterSheet
+      isOpen={isFilterOpen}
+      onClose={() => setIsFilterOpen(false)}
+    >
+      <PageFilters />
+    </FilterSheet>
+  </>
   );
 };
 

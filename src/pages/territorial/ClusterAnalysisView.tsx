@@ -188,7 +188,7 @@ const ClusterAnalysisView: FC = () => {
             </div>
 
             <div className="space-y-3">
-              {tamGapAnalysis
+              {[...tamGapAnalysis]
                 .sort((a, b) => b.marketShare - a.marketShare)
                 .map((region) => (
                   <div key={region.region} className="flex items-center gap-3">
@@ -222,7 +222,7 @@ const ClusterAnalysisView: FC = () => {
             </div>
 
             <div className="space-y-3">
-              {coverageRatios
+              {[...coverageRatios]
                 .sort((a, b) => b.coverage - a.coverage)
                 .map((region) => {
                   const statusColors = {

@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import ErrorPage from '../pages/ErrorPage';
 
 // Lazy load page components for better performance
 import { lazy } from 'react';
@@ -42,11 +43,13 @@ const CampaignPage = lazy(() => import('../pages/CampaignPage'));
  * - 17 submenu items across 4 parent menus
  * - Nested routes with index redirects for parent routes
  * - Role-based access control via route guards
+ * - Error boundary with custom error page
  */
 export const router = createBrowserRouter([
   {
     path: '/',
     element: <Layout />,
+    errorElement: <ErrorPage />,
     children: [
       {
         // Root redirect to dashboard
@@ -57,10 +60,12 @@ export const router = createBrowserRouter([
         // 1. Dashboard (Executive Overview)
         path: 'dashboard',
         element: <DashboardPage />,
+        errorElement: <ErrorPage />,
       },
       {
         // 2. Territorial Intelligence (3 submenus)
         path: 'territorial-intelligence',
+        errorElement: <ErrorPage />,
         children: [
           {
             // Redirect parent route to first submenu
@@ -87,6 +92,7 @@ export const router = createBrowserRouter([
       {
         // 3. Market Intelligence (2 submenus)
         path: 'market-intelligence',
+        errorElement: <ErrorPage />,
         children: [
           {
             // Redirect parent route to first submenu
@@ -108,6 +114,7 @@ export const router = createBrowserRouter([
       {
         // 4. Performance (2 submenus)
         path: 'performance',
+        errorElement: <ErrorPage />,
         children: [
           {
             // Redirect parent route to first submenu
@@ -130,15 +137,18 @@ export const router = createBrowserRouter([
         // 5. Intelligence Assistant (no submenus)
         path: 'intelligence-assistant',
         element: <IntelligenceAssistantPage />,
+        errorElement: <ErrorPage />,
       },
       {
         // 6. Reporting & Analytics (no submenus)
         path: 'reporting',
         element: <ReportingPage />,
+        errorElement: <ErrorPage />,
       },
       {
         // 7. Data Management (3 submenus)
         path: 'data-management',
+        errorElement: <ErrorPage />,
         children: [
           {
             // Redirect parent route to first submenu
@@ -166,6 +176,7 @@ export const router = createBrowserRouter([
         // 8. Campaign & Activation (no submenus)
         path: 'campaign',
         element: <CampaignPage />,
+        errorElement: <ErrorPage />,
       },
     ],
   },

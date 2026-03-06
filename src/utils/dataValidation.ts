@@ -41,11 +41,11 @@ export interface UploadProgress {
 }
 
 // File size limits
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
-const MAX_FILE_SIZE_MB = 50;
+export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+export const MAX_FILE_SIZE_MB = 50;
 
 // Supported file formats
-const SUPPORTED_FORMATS = {
+export const SUPPORTED_FORMATS = {
   csv: ['text/csv', 'application/csv'],
   excel: [
     'application/vnd.ms-excel',

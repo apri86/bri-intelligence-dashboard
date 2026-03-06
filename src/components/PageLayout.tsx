@@ -7,6 +7,7 @@ interface PageLayoutProps {
   subtitle?: string;
   actions?: ReactNode;
   filters?: ReactNode;
+  filterButton?: ReactNode;
   children: ReactNode;
   loading?: boolean;
   error?: string;
@@ -21,7 +22,7 @@ interface PageLayoutProps {
  * - Loading state support with skeleton UI
  * - Error boundary support with error display
  * - Flexible action buttons area
- * - Filter controls integration
+ * - Filter controls integration (legacy) or filter button (new)
  * - Styled with Tailwind CSS
  * 
  * Requirements: 1.3, 17.1, 17.2
@@ -31,6 +32,7 @@ const PageLayout: FC<PageLayoutProps> = ({
   subtitle,
   actions,
   filters,
+  filterButton,
   children,
   loading = false,
   error
@@ -51,15 +53,14 @@ const PageLayout: FC<PageLayoutProps> = ({
           )}
         </div>
         
-        {/* Action Buttons */}
-        {actions && (
-          <div className="flex items-center gap-3">
-            {actions}
-          </div>
-        )}
+        {/* Action Buttons and Filter Button */}
+        <div className="flex items-center gap-3">
+          {filterButton}
+          {actions}
+        </div>
       </div>
 
-      {/* Filters Section */}
+      {/* Filters Section (Legacy - for backward compatibility) */}
       {filters && (
         <div className="bg-white rounded-xl border border-slate-200 p-4">
           {filters}

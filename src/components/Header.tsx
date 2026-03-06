@@ -1,35 +1,30 @@
 import { FC, useState, useRef, useEffect } from 'react';
-import { Menu, X, User, LogOut, ChevronDown, Calendar, MapPin } from 'lucide-react';
-import Breadcrumb from './Breadcrumb';
+import { Menu, X, User, LogOut, ChevronDown, PanelLeftClose } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useFilters } from '../contexts/FilterContext';
 
 interface HeaderProps {
   onToggleMobileMenu: () => void;
   isMobileMenuOpen: boolean;
+  isSidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
 }
 
 /**
  * Header Component
- * Top navigation bar dengan mobile menu toggle, breadcrumb navigation,
- * user profile dropdown, dan global filter controls
+ * Top navigation bar dengan mobile menu toggle dan user profile dropdown
  * 
  * Features:
  * - Mobile menu toggle (Task 2.2)
- * - Breadcrumb navigation (Task 8.1)
- * - Application title dan logo
+ * - Sidebar collapse toggle (desktop only)
+ * - Logo + app name when sidebar is collapsed
  * - User profile dropdown dengan role display (Task 9.1)
- * - Global filter controls untuk date range dan territory (Task 9.1)
  * 
  * Requirements: 2.7, 16.1, 16.2, 16.3, 16.4, 17.1
  */
-const Header: FC<HeaderProps> = ({ onToggleMobileMenu, isMobileMenuOpen }) => {
+const Header: FC<HeaderProps> = ({ onToggleMobileMenu, isMobileMenuOpen, isSidebarCollapsed = false, onToggleSidebar }) => {
   const { user, logout } = useAuth();
-  const { filters, updateFilters, resetFilters } = useFilters();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
-  const filterDropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdowns ketika klik di luar
   useEffect(() => {
@@ -40,49 +35,11 @@ const Header: FC<HeaderProps> = ({ onToggleMobileMenu, isMobileMenuOpen }) => {
       ) {
         setIsProfileDropdownOpen(false);
       }
-      if (
-        filterDropdownRef.current &&
-        !filterDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsFilterDropdownOpen(false);
-      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // Format date untuk display
-  const formatDate = (date: Date): string => {
-    return date.toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
-  // Handle date range change
-  const handleDateRangeChange = (type: 'start' | 'end', value: string) => {
-    const newDate = new Date(value);
-    updateFilters({
-      dateRange: {
-        ...filters.dateRange,
-        [type === 'start' ? 'startDate' : 'endDate']: newDate,
-      },
-    });
-  };
-
-  // Handle territory change
-  const handleTerritoryChange = (territory: string) => {
-    const currentTerritories = filters.territory;
-    const isSelected = currentTerritories.includes(territory);
-    
-    updateFilters({
-      territory: isSelected
-        ? currentTerritories.filter((t) => t !== territory)
-        : [...currentTerritories, territory],
-    });
-  };
 
   // Get user initials untuk avatar
   const getUserInitials = (name: string): string => {
@@ -94,20 +51,11 @@ const Header: FC<HeaderProps> = ({ onToggleMobileMenu, isMobileMenuOpen }) => {
       .slice(0, 2);
   };
 
-  // Territory options (mock data - akan diganti dengan data real)
-  const territoryOptions = [
-    'DKI Jakarta',
-    'Jawa Barat',
-    'Jawa Tengah',
-    'Jawa Timur',
-    'Banten',
-  ];
-
   return (
-    <header className="bg-white border-b border-slate-200 px-4 py-3 md:px-6 md:py-4">
-      <div className="flex flex-col gap-3">
-        {/* Top row: Mobile menu toggle, title, filters, dan user profile */}
-        <div className="flex items-center justify-between gap-4">
+    <header className="bg-white border-b border-slate-200 px-4 md:px-6" style={{ height: '73px' }}>
+      <div className="flex items-center justify-between gap-4 h-full">
+        {/* Left side: Mobile menu toggle or Sidebar collapse toggle */}
+        <div className="flex items-center gap-3">
           {/* Mobile menu toggle */}
           <button
             onClick={onToggleMobileMenu}
@@ -121,112 +69,39 @@ const Header: FC<HeaderProps> = ({ onToggleMobileMenu, isMobileMenuOpen }) => {
             )}
           </button>
 
-          {/* Application title dan logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">BRI</span>
+          {/* Desktop sidebar collapse toggle (only when sidebar is expanded) */}
+          {!isSidebarCollapsed && onToggleSidebar && (
+            <button
+              onClick={onToggleSidebar}
+              className="hidden md:flex p-2 rounded-lg hover:bg-slate-100 transition-colors"
+              aria-label="Collapse sidebar"
+            >
+              <PanelLeftClose className="w-5 h-5 text-slate-600" />
+            </button>
+          )}
+
+          {/* Logo + app name (shown when sidebar is collapsed on desktop) */}
+          {isSidebarCollapsed && (
+            <div className="hidden md:flex items-center gap-3">
+              <img 
+                src="/bri-logo.png" 
+                alt="BRI Logo" 
+                className="w-8 h-8 object-contain shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <h1 className="text-sm font-bold text-slate-900 leading-tight">
+                  Intelligence
+                </h1>
+                <p className="text-xs text-slate-600 leading-tight">
+                  Dashboard
+                </p>
+              </div>
             </div>
-            <h1 className="hidden sm:block text-lg md:text-xl font-bold text-slate-900">
-              BRI Intelligence Dashboard
-            </h1>
-          </div>
+          )}
+        </div>
 
-          {/* Global filter controls dan user profile */}
-          <div className="flex items-center gap-2 md:gap-4">
-            {/* Global filter controls */}
-            <div className="relative" ref={filterDropdownRef}>
-              <button
-                onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-                aria-label="Global filters"
-              >
-                <Calendar className="w-4 h-4 text-slate-600" />
-                <span className="hidden md:inline text-sm text-slate-700">
-                  {formatDate(filters.dateRange.startDate)} - {formatDate(filters.dateRange.endDate)}
-                </span>
-                <ChevronDown className="w-4 h-4 text-slate-600" />
-              </button>
-
-              {/* Filter dropdown */}
-              {isFilterDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
-                  <div className="p-4 space-y-4">
-                    {/* Date range filter */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Periode Tanggal
-                      </label>
-                      <div className="space-y-2">
-                        <div>
-                          <label className="block text-xs text-slate-600 mb-1">
-                            Tanggal Mulai
-                          </label>
-                          <input
-                            type="date"
-                            value={filters.dateRange.startDate.toISOString().split('T')[0]}
-                            onChange={(e) => handleDateRangeChange('start', e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-slate-600 mb-1">
-                            Tanggal Akhir
-                          </label>
-                          <input
-                            type="date"
-                            value={filters.dateRange.endDate.toISOString().split('T')[0]}
-                            onChange={(e) => handleDateRangeChange('end', e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Territory filter */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        <MapPin className="w-4 h-4 inline mr-1" />
-                        Wilayah
-                      </label>
-                      <div className="space-y-2 max-h-40 overflow-y-auto">
-                        {territoryOptions.map((territory) => (
-                          <label
-                            key={territory}
-                            className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={filters.territory.includes(territory)}
-                              onChange={() => handleTerritoryChange(territory)}
-                              className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
-                            />
-                            <span className="text-sm text-slate-700">{territory}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Filter actions */}
-                    <div className="flex gap-2 pt-2 border-t border-slate-200">
-                      <button
-                        onClick={resetFilters}
-                        className="flex-1 px-3 py-2 text-sm text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-                      >
-                        Reset
-                      </button>
-                      <button
-                        onClick={() => setIsFilterDropdownOpen(false)}
-                        className="flex-1 px-3 py-2 text-sm text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
-                      >
-                        Terapkan
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* User profile dropdown */}
+        {/* User profile dropdown */}
+        <div className="flex items-center gap-2 md:gap-4 ml-auto">
             {user && (
               <div className="relative" ref={profileDropdownRef}>
                 <button
@@ -317,10 +192,6 @@ const Header: FC<HeaderProps> = ({ onToggleMobileMenu, isMobileMenuOpen }) => {
             )}
           </div>
         </div>
-
-        {/* Breadcrumb navigation */}
-        <Breadcrumb />
-      </div>
     </header>
   );
 };

@@ -76,7 +76,7 @@ const campaignSlice = createSlice({
       state.dormantMerchants = action.payload;
     },
     setPriorityRegions: (state, action: PayloadAction<PriorityRegion[]>) => {
-      state.priorityRegions = action.payload.sort((a, b) => b.opportunityScore - a.opportunityScore);
+      state.priorityRegions = [...action.payload].sort((a, b) => b.opportunityScore - a.opportunityScore);
     },
     setSelectedCampaignId: (state, action: PayloadAction<string | null>) => {
       state.selectedCampaignId = action.payload;
